@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dependency Exit Capsule",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "tool", "repository", "dependency", "maintenance_problem", "risk_indicators", "usage_locations", "footprint", "ai_analysis", "proposed_changes", "verification", "gaps", "unresolved", "out_of_scope"],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["1.0"] },
+    "generated_at": { "type": "string" },
+    "tool": { "type": "object", "required": ["name", "version"] },
+    "repository": { "type": "object", "required": ["name", "path", "commit", "dirty"], "properties": { "commit": { "type": "string" }, "dirty": { "type": "boolean" } } },
+    "dependency": { "type": "object", "required": ["name", "ecosystem"] },
+    "maintenance_problem": { "$ref": "#/definitions/entry" },
+    "risk_indicators": { "type": "array", "items": { "$ref": "#/definitions/entry" } },
+    "usage_locations": { "type": "array", "items": { "$ref": "#/definitions/entry" } },
+    "footprint": { "type": "object", "required": ["tag", "symbols", "call_sites", "files", "exit_difficulty", "formula"] },
+    "ai_analysis": {
+      "type": "object",
+      "required": ["status", "plan", "claims", "accuracy"],
+      "properties": {
+        "status": { "type": "string", "enum": ["ok", "failed", "not_run"] },
+        "claims": { "type": "array", "items": { "$ref": "#/definitions/claim" } },
+        "accuracy": { "type": "object", "required": ["total", "confirmed", "refuted", "unverifiable"] }
+      }
+    },
+    "proposed_changes": { "type": "object", "required": ["status", "diff"], "properties": { "status": { "type": "string", "enum": ["proposed", "applied", "verified"] }, "diff": { "type": "string" } } },
+    "verification": {
+      "type": "object",
+      "required": ["baseline", "after", "passed", "failed", "not_run", "comparison", "comparison_method"],
+      "properties": { "baseline": { "type": "array", "items": { "$ref": "#/definitions/check" } }, "after": { "type": "array", "items": { "$ref": "#/definitions/check" } } }
+    },
+    "gaps": { "type": "array", "items": { "$ref": "#/definitions/entry" } },
+    "unresolved": { "type": "array", "items": { "$ref": "#/definitions/entry" } },
+    "out_of_scope": { "type": "string" }
+  },
+  "definitions": {
+    "entry": { "type": "object", "required": ["tag", "source", "text"], "properties": { "tag": { "type": "string", "enum": ["OBSERVED", "EXECUTED", "AI-GENERATED"] }, "text": { "type": "string" } } },
+    "claim": { "type": "object", "required": ["tag", "source", "text", "id", "type", "verdict"], "properties": { "tag": { "type": "string", "enum": ["AI-GENERATED"] }, "verdict": { "type": "string", "enum": ["CONFIRMED", "REFUTED", "UNVERIFIABLE"] } } },
+    "check": { "type": "object", "required": ["tag", "id", "status"], "properties": { "tag": { "type": "string", "enum": ["OBSERVED", "EXECUTED"] }, "status": { "type": "string", "enum": ["passed", "failed", "not_run"] } } }
+  }
+}

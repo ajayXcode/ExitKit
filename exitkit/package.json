@@ -1,0 +1,22 @@
+{
+  "name": "exitkit",
+  "version": "0.1.0",
+  "description": "Exit a risky dependency safely: scan, map usage, get an open-weight AI exit plan, cross-check its claims with code, apply in a git worktree, and emit a re-runnable Dependency Exit Capsule.",
+  "type": "module",
+  "bin": { "exitkit": "bin/exitkit.js" },
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["bin", "src", "references", "assets", "SKILL.md", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "prepublishOnly": "npm test"
+  },
+  "engines": { "node": ">=18" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ajayXcode/ExitKit.git"
+  },
+  "homepage": "https://exitkitt.vercel.app/",
+  "keywords": ["dependency", "maintenance", "agent-skill", "open-weight", "migration", "cli"],
+  "license": "MIT"
+}

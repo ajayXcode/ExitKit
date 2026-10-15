@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Epilogue:ital,wght@0,100..900;1,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --exit-text: #080909;
+  --exit-desktop-bg: #dfe4f2;
+  --exit-lavender: #f0eefa;
+  --exit-badge: #f7f8fa;
+}
+
+body {
+  color: var(--exit-text);
+  background-color: var(--exit-lavender);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, .font-epilogue {
+  font-family: 'Epilogue', sans-serif;
+}
+
+/* Badge provenance tags */
+.badge-observed {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.badge-executed {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-ai {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+
+/* Claim verdicts */
+.verdict-confirmed {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.verdict-refuted {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.verdict-unverifiable {
+  background-color: #fefce8;
+  color: #a16207;
+  border: 1px solid #fef08a;
+}
