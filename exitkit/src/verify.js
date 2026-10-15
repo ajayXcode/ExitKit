@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readJSON, run, sha256, normalize } from './util.js';
+import { readJSON, run, sha256, normalize, validateCommand } from './util.js';
 
 export function verifyCapsule(capsulePath, { repo } = {}) {
   const c = readJSON(capsulePath);
@@ -10,13 +10,29 @@ export function verifyCapsule(capsulePath, { repo } = {}) {
   const co = path.join(tmp, 'checkout');
   const results = [], notes = [];
   if (c.repository.dirty) notes.push('capsule was made from a dirty checkout; results may differ from the recorded commit');
+
+  // Validate commit identifier format to prevent argument injection
+  const commit = String(c.repository.commit || '').trim();
+  if (!/^[a-f0-9]{7,40}$/i.test(commit) && commit !== 'unknown') {
+    throw new Error(`Untrusted or invalid repository commit hash in capsule: "${commit}"`);
+  }
+
   let r = run(`git clone -q "${source}" "${co}"`, tmp, 120000);
   if (r.exit !== 0) throw new Error(`cannot clone ${source}: ${r.out.trim()}`);
-  r = run(`git checkout -q ${c.repository.commit}`, co, 60000);
-  if (r.exit !== 0) throw new Error(`cannot check out ${c.repository.commit}: ${r.out.trim()}`);
+  if (commit !== 'unknown') {
+    r = run(`git checkout -q ${commit}`, co, 60000);
+    if (r.exit !== 0) throw new Error(`cannot check out ${commit}: ${r.out.trim()}`);
+  }
 
   const replay = (phase, list) => {
-    for (const chk of list.filter((x) => x.tag === 'EXECUTED')) {
+    for (const chk of (list || []).filter((x) => x.tag === 'EXECUTED')) {
+      try {
+        validateCommand(chk.cmd);
+      } catch (err) {
+        notes.push(`Command rejected for security reasons (${chk.cmd}): ${err.message}`);
+        results.push({ phase, id: chk.id, cmd: chk.cmd, expected_exit: chk.exit, actual_exit: 126, hash_match: false, pass: false });
+        continue;
+      }
       const out = run(chk.cmd, co);
       const norm = sha256(normalize(out.out, co));
       const exitMatch = out.exit === chk.exit, hashMatch = norm === chk.normalized_sha256;

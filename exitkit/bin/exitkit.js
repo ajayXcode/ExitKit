@@ -62,6 +62,7 @@ async function main() {
     }
     case 'risk': {
       const repo = need(a, '<repo>');
+      if (!fs.existsSync(w('deps.json'))) throw new Error(`'deps.json' missing in "${work}": run 'exitkit scan <repo> --work ${work}' first`);
       const r = await scoreRisk(repo, readJSON(w('deps.json')), { online: !!flags.online }); writeJSON(w('risk.json'), r);
       out(r, [...r.dependencies.map((d) => `${String(d.score).padStart(2)}  ${d.name}\n${d.signals.map((s) => `      - ${s.text}`).join('\n')}`), ...r.not_run.map((n) => `not_run: ${n.id} - ${n.reason}`)].join('\n'));
       break;
@@ -86,18 +87,23 @@ async function main() {
     case 'analyze': {
       const repo = need(a, '<repo>');
       if (!b) throw new Error('missing <package>');
+      if (!fs.existsSync(w('usages.json'))) throw new Error(`'usages.json' missing in "${work}": run 'exitkit usages <repo> <package> --work ${work}' first`);
       const ai = await analyze(repo, b, readJSON(w('usages.json'))); writeJSON(w('claims.json'), ai); fs.writeFileSync(w('patch.diff'), ai.diff || '');
       out(ai, `status: ${ai.status}${ai.reason ? ` - ${ai.reason}` : ''}\nclaims: ${ai.claims.length}  diff: ${ai.diff ? ai.diff.split('\n').length + ' lines' : 'none'}`);
       break;
     }
     case 'ledger': {
       const repo = need(a, '<repo>');
+      if (!fs.existsSync(w('claims.json'))) throw new Error(`'claims.json' missing in "${work}": run 'exitkit analyze <repo> <package> --work ${work}' first`);
+      if (!fs.existsSync(w('usages.json'))) throw new Error(`'usages.json' missing in "${work}": run 'exitkit usages <repo> <package> --work ${work}' first`);
       const l = runLedger(readJSON(w('claims.json')).claims, { repo, usages: readJSON(w('usages.json')) }); writeJSON(w('ledger.json'), l);
       out(l, [...l.claims.map((c) => `${c.verdict.padEnd(12)} ${c.id}: ${c.statement}`), `${l.summary.total} claims: ${l.summary.confirmed} confirmed, ${l.summary.refuted} refuted, ${l.summary.unverifiable} unverifiable`].join('\n'));
       break;
     }
     case 'patch': {
       const repo = need(a, '<repo>');
+      if (!fs.existsSync(w('meta.json'))) throw new Error(`'meta.json' missing in "${work}": run 'exitkit usages <repo> <package> --work ${work}' first`);
+      if (!fs.existsSync(w('patch.diff'))) throw new Error(`'patch.diff' missing in "${work}": run 'exitkit analyze <repo> <package> --work ${work}' first`);
       const meta = readJSON(w('meta.json'));
       const p = applyPatch(repo, w('patch.diff'), { pkg: meta.package, worktree: flags.worktree }); writeJSON(w('patch.json'), p);
       writeJSON(w('after.json'), p.status === 'applied' ? runChecks(p.worktree, { install: !!flags.install, cmd: flags.cmd || [] }) : { path: null, checks: [] });
@@ -105,6 +111,8 @@ async function main() {
       break;
     }
     case 'capsule': {
+      if (!fs.existsSync(w('meta.json'))) throw new Error(`'meta.json' missing in "${work}": run 'exitkit usages <repo> <package> --work ${work}' first`);
+      if (!fs.existsSync(w('usages.json'))) throw new Error(`'usages.json' missing in "${work}": run 'exitkit usages <repo> <package> --work ${work}' first`);
       const c = buildCapsule(work, { out: path.resolve(flags.out || work) });
       out(c, `capsule written (schema valid), change status: ${c.proposed_changes.status}`);
       break;

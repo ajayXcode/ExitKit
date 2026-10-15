@@ -83,10 +83,18 @@ export function buildCapsule(work, { out = work } = {}) {
 
   // Proposed changes: proposed -> applied -> verified.
   let changeStatus = 'proposed';
-  if (patch?.status === 'applied') {
+  const hasDiff = typeof ai?.diff === 'string' && ai.diff.trim().length > 0;
+  if (patch?.status === 'applied' && !patch?.error && hasDiff) {
     changeStatus = 'applied';
+    const executedAfter = afterEntries.filter((c) => c.tag === 'EXECUTED');
+    const passedAfter = executedAfter.filter((c) => c.status === 'passed');
+    const failedAfter = executedAfter.filter((c) => c.status === 'failed');
     const noRegression = !comparison.some((c) => c.regression);
-    if (afterEntries.some((c) => c.status === 'passed') && noRegression && !afterEntries.some((c) => c.status === 'failed')) changeStatus = 'verified';
+
+    // Patch is only 'verified' if executed after-checks ran, at least one passed, none failed, and no regression
+    if (passedAfter.length > 0 && failedAfter.length === 0 && noRegression) {
+      changeStatus = 'verified';
+    }
   }
   if (patch?.error) open(`patch not applied: ${patch.error}`);
   if (patch?.status === 'applied' && changeStatus !== 'verified') open('patch applied but after-checks did not all pass; do not treat as verified');

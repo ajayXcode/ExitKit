@@ -1,3 +1,4 @@
 node_modules
 .exitkit
 *.tgz
+.npmrc

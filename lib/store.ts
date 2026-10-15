@@ -483,6 +483,43 @@ export function verifyCapsule(id: string): { ok: boolean; results: unknown[]; de
   if (!capsule) {
     return { ok: false, results: [], details: 'Capsule not found' };
   }
+
+  // Attempt real reproduction via ExitKit CLI verify
+  try {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const os = require('node:os');
+    const { spawnSync } = require('node:child_process');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ek-store-verify-'));
+    const tempCapsuleFile = path.join(tempDir, 'capsule.json');
+    fs.writeFileSync(tempCapsuleFile, JSON.stringify(capsule, null, 2));
+
+    const binPath = path.resolve(process.cwd(), 'exitkit', 'bin', 'exitkit.js');
+    const repoPath = capsule.repository?.path;
+
+    const args = [binPath, 'verify', tempCapsuleFile, '--json'];
+    if (repoPath && fs.existsSync(repoPath)) {
+      args.push('--repo', repoPath);
+    }
+
+    const res = spawnSync(process.execPath, args, { encoding: 'utf8', timeout: 60000 });
+    fs.rmSync(tempDir, { recursive: true, force: true });
+
+    if (res.status === 0 && res.stdout) {
+      const parsed = JSON.parse(res.stdout);
+      return {
+        ok: !!parsed.ok,
+        results: parsed.results || [],
+        details: parsed.ok
+          ? 'Replay verification succeeded: recorded baseline and after checks reproduced with matching exit codes and output hashes.'
+          : 'Replay verification completed with differences between recorded and reproduced states.',
+      };
+    }
+  } catch {
+    // Fall back to recorded verification ledger if repository clone is unavailable
+  }
+
   const comparisons = capsule.verification.comparison.map((c) => ({
     checkId: c.id,
     baseline: c.baseline,
@@ -496,7 +533,7 @@ export function verifyCapsule(id: string): { ok: boolean; results: unknown[]; de
     results: comparisons,
     details: hasRegressions
       ? 'Verification failed: regressions observed between baseline and after checks'
-      : 'All checks verified. No regressions detected in worktree execution.',
+      : 'All checks verified from recorded execution log. No regressions detected.',
   };
 }
 

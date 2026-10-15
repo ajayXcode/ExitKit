@@ -16,6 +16,45 @@ export function writeJSON(p, data) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2) + '\n');
 }
 
+export const ALLOWED_BINARIES = new Set([
+  'git', 'python', 'python3', 'python.exe', 'python3.exe',
+  'npm', 'npm.cmd', 'npx', 'npx.cmd', 'node', 'node.exe',
+  'pytest', 'pip', 'pip3', 'cargo',
+]);
+
+export function isSafeCommand(cmd) {
+  if (typeof cmd !== 'string' || !cmd.trim()) return false;
+  const trimmed = cmd.trim();
+  // Reject dangerous shell chaining operators
+  if (/[;&`]/.test(trimmed) || /\$\(/.test(trimmed) || /\|\|/.test(trimmed)) {
+    return false;
+  }
+  // If it contains pipe |, verify it is only inside quotes (such as compileall -x "regex|regex")
+  if (trimmed.includes('|')) {
+    let inQuotes = false;
+    let quoteChar = '';
+    for (let i = 0; i < trimmed.length; i++) {
+      const ch = trimmed[i];
+      if ((ch === '"' || ch === "'") && (i === 0 || trimmed[i - 1] !== '\\')) {
+        if (!inQuotes) { inQuotes = true; quoteChar = ch; }
+        else if (quoteChar === ch) { inQuotes = false; }
+      } else if (ch === '|' && !inQuotes) {
+        return false;
+      }
+    }
+  }
+  // Extract binary executable name
+  const firstToken = trimmed.split(/\s+/)[0].replace(/^["']|["']$/g, '');
+  const binName = path.basename(firstToken).toLowerCase();
+  return ALLOWED_BINARIES.has(binName);
+}
+
+export function validateCommand(cmd) {
+  if (!isSafeCommand(cmd)) {
+    throw new Error(`Command rejected by security validation: "${cmd}". Only standard approved dev tools (git, python, npm, etc.) without shell chaining are permitted.`);
+  }
+}
+
 export function run(cmd, cwd, timeoutMs = 300000, extraEnv = {}) {
   const t = Date.now();
   const pycache = path.join(os.tmpdir(), 'exitkit-pycache');
