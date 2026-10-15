@@ -17,7 +17,8 @@ function makeRepo() {
   fs.writeFileSync(path.join(repo, 'requirements.txt'), 'fastapi>=0.110,<1\nanthropic>=0.40\nopenai>=1.40\n');
   fs.writeFileSync(path.join(repo, 'agent.py'), 'MODELS = {"a": "claude-sonnet-4-5"}\n\ndef run():\n    import anthropic\n    return anthropic.Anthropic()\n');
   git('git init -q -b main && git add -A && git commit -q -m init', repo);
-  // build the diff the "model" will return
+  // build the diff the "model" will return (exiting anthropic from both manifest and code)
+  fs.writeFileSync(path.join(repo, 'requirements.txt'), 'fastapi>=0.110,<1\nopenai>=1.40\n');
   fs.writeFileSync(path.join(repo, 'agent.py'), 'MODELS = {"a": "local-model"}\n\ndef run():\n    return None\n');
   const diff = git('git diff', repo);
   git('git checkout -q .', repo);

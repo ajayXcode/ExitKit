@@ -8,10 +8,11 @@ import { runChecks } from './checks.js';
 import { analyze } from './analyze.js';
 import { runLedger } from './verifiers.js';
 import { applyPatch } from './patch.js';
+import { checkExitInvariants } from './invariants.js';
 import { buildCapsule } from './capsule.js';
 import { verifyCapsule } from './verify.js';
 
-export { scanRepo, scoreRisk, findUsages, runChecks, analyze, runLedger, applyPatch, buildCapsule, verifyCapsule };
+export { scanRepo, scoreRisk, findUsages, runChecks, analyze, runLedger, applyPatch, checkExitInvariants, buildCapsule, verifyCapsule };
 
 export async function runPipeline(repoArg, flags = {}, log = () => {}) {
   const repo = path.resolve(repoArg);
@@ -42,7 +43,19 @@ export async function runPipeline(repoArg, flags = {}, log = () => {}) {
   writeJSON(w('ledger.json'), runLedger(ai.claims, { repo, usages }));
   log('8/9 patch in worktree + after checks');
   const patch = applyPatch(repo, w('patch.diff'), { pkg: target.name, worktree: flags.worktree }); writeJSON(w('patch.json'), patch);
-  writeJSON(w('after.json'), patch.status === 'applied' ? runChecks(patch.worktree, copts) : { path: null, checks: [] });
+  const afterChecks = patch.status === 'applied' ? runChecks(patch.worktree, copts) : { path: null, checks: [] };
+  writeJSON(w('after.json'), afterChecks);
+  if (patch.status === 'applied') {
+    const baseline = readJSON(w('baseline.json'));
+    const comp = (baseline?.checks || []).map((b) => ({
+      id: b.id,
+      baseline: b.status,
+      after: afterChecks.checks.find((c) => c.id === b.id)?.status || 'absent',
+      regression: b.status === 'passed' && (afterChecks.checks.find((c) => c.id === b.id)?.status === 'failed'),
+    }));
+    const invariants = checkExitInvariants(patch.worktree, target.name, target.ecosystem, comp);
+    writeJSON(w('invariants.json'), invariants);
+  }
   log('9/9 capsule');
   return buildCapsule(work, { out: path.resolve(flags.out || work) });
 }

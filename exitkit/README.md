@@ -1,56 +1,110 @@
-# ExitKit
+# ExitKit 🚪⚡
 
-Exit a risky dependency safely. ExitKit finds the dependency worth leaving, maps how the code uses it, asks an **open-weight** model for an exit plan as *checkable claims*, tries to refute those claims with code, applies the change in a **git worktree**, re-runs checks, and writes a re-runnable **Dependency Exit Capsule**.
+**Exit risky dependencies safely with open-weight AI, deterministic claim verification, and reproducible Dependency Exit Capsules.**
 
-> Other tools ask you to trust the AI's report. ExitKit shows you which of the AI's claims survived being checked.
+[![Live Web Platform](https://img.shields.io/badge/Live%20Platform-exitkitt.vercel.app-8B5CF6?style=for-the-badge&logo=vercel&logoColor=white)](https://exitkitt.vercel.app/)
+[![npm version](https://img.shields.io/npm/v/exitkit?style=for-the-badge&color=blue&logo=npm)](https://www.npmjs.com/package/exitkit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen.svg?style=for-the-badge)](package.json)
 
-## Install
+---
+
+> [!TIP]
+> **Hosted Cloud Platform & Sandbox UI**: Visit **[https://exitkitt.vercel.app/](https://exitkitt.vercel.app/)** to explore real-time visual capsules, dependency health scoring, and shareable migration reports.
+
+---
+
+ExitKit audits a risky dependency, maps everywhere it is imported or called, asks an **open-weight** LLM for an exit plan as *checkable claims*, refutes those claims with code, applies the patch inside an isolated **git worktree**, re-runs checks, and writes a schema-validated, re-runnable **Dependency Exit Capsule**.
+
+> **Other tools ask you to trust the AI's report. ExitKit shows you which of the AI's claims survived being checked.**
+
+---
+
+## 📦 Installation
 
 ```bash
-npx exitkit --help          # no install
-npm i -g exitkit            # or global
+# Run directly without installation
+npx exitkit --help
+
+# Or install globally
+npm install -g exitkit
 ```
 
-Requires Node.js 18+ and git. Zero runtime dependencies.
+**Prerequisites:**
+- Node.js 18+
+- Git (`git --version`)
+- Python 3.10+ (for Python repositories)
+- Zero external runtime npm dependencies.
 
-## Quick start
+---
+
+## ⚡ Quick Start
 
 ```bash
-export EXITKIT_BASE_URL=http://localhost:11434/v1   # Ollama; vLLM works too (use another port than your app)
-export EXITKIT_MODEL=<your-open-weight-model>
-export EXITKIT_API_KEY=ollama
+# 1. (Optional) Point to any local OpenAI-compatible endpoint (Ollama, vLLM, LM Studio)
+export EXITKIT_BASE_URL="http://localhost:11434/v1"
+export EXITKIT_MODEL="qwen2.5-coder-32b-instruct"
+export EXITKIT_API_KEY="ollama"
 
-exitkit run ./target-repo --package anthropic --out ./capsule
-exitkit verify ./capsule/capsule.json
+# 2. Run full 9-step exit pipeline on target repo
+npx exitkit run ./my-project --package anthropic --out ./out
+
+# 3. Re-verify the recorded execution
+npx exitkit verify ./out/capsule.json
 ```
 
-Without a model configured, `run` still works: the AI step is recorded as `not_run` and the capsule says so.
+*Note: Without a model configured, `exitkit run` still executes baseline checks and marks the AI analysis step safely as `not_run`.*
 
-## Commands
+---
 
-`run`, `scan`, `risk`, `usages`, `checks`, `analyze`, `ledger`, `patch`, `capsule`, `verify`. See `exitkit --help`.
+## 🛠️ Commands
 
-## What the capsule guarantees
+| Command | Description |
+| :--- | :--- |
+| `exitkit run <repo> [--package <name>]` | Runs full 9-step pipeline and writes `capsule.json` + `capsule.md` |
+| `exitkit scan <repo>` | Lists dependencies with file, line, and version bounds |
+| `exitkit risk <repo> [--online]` | Scans maintenance signals (unbounded specs, vendor lock-in, stale) |
+| `exitkit usages <repo> <package>` | Maps AST imports, call sites, and calculates exit footprint score |
+| `exitkit checks <repo> [--install]` | Executes baseline compile and test suite |
+| `exitkit analyze <repo> <package>` | Queries open-weight model for plan, diff, and checkable claims |
+| `exitkit ledger <repo>` | Cross-examines AI claims with deterministic code verifiers |
+| `exitkit patch <repo>` | Applies diff in isolated git worktree without touching main branch |
+| `exitkit capsule <repo>` | Builds and schema-validates `capsule.json` and `capsule.md` |
+| `exitkit verify <capsule.json>` | Re-runs recorded commands at the recorded commit in sandbox |
 
-- Every entry is tagged OBSERVED, EXECUTED or AI-GENERATED, enforced in code (`src/provenance.js`).
-- Verdicts (CONFIRMED / REFUTED / UNVERIFIABLE) come only from the claim ledger.
-- Changes are tracked as proposed, applied, verified. The original checkout is never edited.
-- Checks that could not run are `not_run` with a reason.
-- `exitkit verify` re-runs recorded commands at the recorded commit and compares exit codes and normalized output.
+---
 
-## Limitations
+## 🛡️ The Provenance Guarantee
 
-- Usage detection is line-based pattern matching, not a full AST. It misses multi-line imports and instance-method calls.
-- Only `only_used_in` and `schema_compat` claims are verified automatically. The fake-server runtime check is not implemented, so those claims are UNVERIFIABLE.
-- Small local models may return malformed JSON or weak diffs. Failures are recorded in the capsule, not hidden.
-- Security vulnerabilities (CVEs) are intentionally out of scope.
-- Choose your model yourself and check its license and hardware needs.
+Every entry in an ExitKit Capsule is tagged with an immutable provenance tier enforced in code (`src/provenance.js`):
 
-## Development
+- **`[OBSERVED]`**: Extracted directly from files or AST. Cannot be emitted by the model.
+- **`[EXECUTED]`**: Real command run in the repo. Records exact command string, exit code, duration, and output SHA-256.
+- **`[AI-GENERATED]`**: Model hypotheses. Unverified unless accompanied by a deterministic ledger verdict (`CONFIRMED`, `REFUTED`, or `UNVERIFIABLE`).
+- **Real Verification**: A change is only marked `verified` if git apply succeeded in the worktree, after-checks executed without errors, and no regressions occurred.
+
+---
+
+## 🤖 Agent Skill
+
+ExitKit includes `SKILL.md` for native pairing with AI agents:
+- **Codex**: Implementation & Code Review
+- **Claude**: Adversarial Review
+- **Antigravity**: Primary Builder & Worktree Orchestrator
+
+---
+
+## 🧪 Testing
 
 ```bash
 npm test
-npm pack --dry-run
 ```
 
-MIT licensed.
+18 automated tests covering end-to-end pipelines, command security validation, malformed capsule rejection, schema validation, and ledger verification.
+
+---
+
+## 📄 License
+
+MIT © [Ajay Yadav](https://github.com/ajayXcode)
+

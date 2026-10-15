@@ -84,20 +84,30 @@ export function buildCapsule(work, { out = work } = {}) {
   // Proposed changes: proposed -> applied -> verified.
   let changeStatus = 'proposed';
   const hasDiff = typeof ai?.diff === 'string' && ai.diff.trim().length > 0;
+  const invariants = rd('invariants.json');
   if (patch?.status === 'applied' && !patch?.error && hasDiff) {
     changeStatus = 'applied';
     const executedAfter = afterEntries.filter((c) => c.tag === 'EXECUTED');
     const passedAfter = executedAfter.filter((c) => c.status === 'passed');
     const failedAfter = executedAfter.filter((c) => c.status === 'failed');
     const noRegression = !comparison.some((c) => c.regression);
+    const invariantsPassed = invariants ? invariants.ok : true;
 
-    // Patch is only 'verified' if executed after-checks ran, at least one passed, none failed, and no regression
-    if (passedAfter.length > 0 && failedAfter.length === 0 && noRegression) {
+    // Patch is only 'verified' if executed after-checks ran, at least one passed, none failed, no regression, and exit invariants passed
+    if (passedAfter.length > 0 && failedAfter.length === 0 && noRegression && invariantsPassed) {
       changeStatus = 'verified';
     }
   }
   if (patch?.error) open(`patch not applied: ${patch.error}`);
-  if (patch?.status === 'applied' && changeStatus !== 'verified') open('patch applied but after-checks did not all pass; do not treat as verified');
+  if (patch?.status === 'applied' && changeStatus !== 'verified') {
+    if (invariants && !invariants.ok) {
+      for (const inv of invariants.invariants.filter((i) => !i.pass)) {
+        open(`Exit invariant failed: ${inv.statement} (${inv.details})`);
+      }
+    } else {
+      open('patch applied but after-checks did not all pass; do not treat as verified');
+    }
+  }
   if (!patch) open('no patch step was run');
   const proposed_changes = { diff_tag: 'AI-GENERATED', status: changeStatus, diff: ai?.diff || '', branch: patch?.branch || null, worktree: patch?.worktree || null, error: patch?.error || null, apply_commands: patch?.commands || [] };
 
