@@ -2,3 +2,5 @@ node_modules
 .exitkit
 *.tgz
 .npmrc
+.env
+.env.local

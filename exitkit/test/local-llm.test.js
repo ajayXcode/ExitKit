@@ -150,3 +150,39 @@ Extra commentary at the bottom that is not JSON.`;
   assert.deepEqual(parsed.plan, ['step 1']);
   assert.equal(parsed.diff, 'patch');
 });
+
+test('live Ollama local model: generates verified analysis with qwen2.5-coder:7b', async (t) => {
+  const baseUrl = process.env.EXITKIT_BASE_URL || 'http://127.0.0.1:11434/v1';
+  const model = process.env.EXITKIT_MODEL || 'qwen2.5-coder:7b';
+
+  try {
+    const probe = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, { signal: AbortSignal.timeout(3000) });
+    if (!probe.ok) {
+      t.skip(`Ollama endpoint at ${baseUrl} is not reachable (HTTP ${probe.status})`);
+      return;
+    }
+  } catch {
+    t.skip(`Ollama endpoint at ${baseUrl} is not running`);
+    return;
+  }
+
+  const usages = {
+    footprint: { symbols: ['Anthropic', 'messages.create'], call_sites: 1, files: ['agent.py'], exit_difficulty: 5 },
+    usages: [{ file: 'agent.py', line: 1, text: 'import anthropic' }],
+  };
+
+  const result = await analyze(process.cwd(), 'anthropic', usages, {
+    apiBase: baseUrl,
+    model,
+    apiKey: 'ollama',
+  });
+
+  assert.equal(result.status, 'ok', `Expected status 'ok', got '${result.status}' (reason: ${result.reason})`);
+  assert.equal(result.tag, 'AI-GENERATED');
+  assert.equal(result.model, model);
+  assert.ok(Array.isArray(result.plan), 'plan should be an array');
+  assert.ok(result.plan.length > 0, 'plan should contain migration steps');
+  assert.ok(Array.isArray(result.claims), 'claims should be an array');
+  assert.ok(result.claims.length > 0, 'claims should contain checkable statements');
+  assert.ok(result.claims.every((c) => typeof c.id === 'string' && typeof c.statement === 'string'));
+});

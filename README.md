@@ -140,7 +140,7 @@ VERIFIED: recorded results reproduced
 
 ## 🤖 Agent Skill Integration
 
-ExitKit is packaged as a standard **Agent Skill** (`exitkit/SKILL.md`) for pairing with multi-agent coding workflows:
+ExitKit is built natively as an **Agent Skill** (`exitkit/SKILL.md`). Any modern coding agent can discover, read, and execute ExitKit directly:
 
 ```
                   ┌───────────────────────────────────────────────┐
@@ -156,11 +156,101 @@ ExitKit is packaged as a standard **Agent Skill** (`exitkit/SKILL.md`) for pairi
                    └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
-- **Antigravity (Builder)**: Follows the skill to run the CLI, spawn isolated worktrees, and wire the local LLM gateway.
-- **Codex (Implementer & Reviewer)**: Audits AST footprints, implements fallback adapters, and validates test suites.
-- **Claude (Adversarial Critic)**: Inspects the Claim Ledger, challenges optimistic assumptions, and tests security boundaries.
+### 1. How to Load ExitKit into Your Coding Agent
 
-Point your coding agent to `exitkit/SKILL.md` to begin an automated dependency exit.
+#### A. Claude Code (Anthropic CLI)
+Pass the skill directly or drop it into your project:
+```bash
+# Direct reference during execution
+claude "Read exitkit/SKILL.md and run the exit workflow on 'anthropic'"
+
+# Or install as a project skill
+mkdir -p .claude/skills
+cp exitkit/SKILL.md .claude/skills/exitkit.md
+```
+
+#### B. Google Antigravity / Gemini CLI
+Copy the skill to your global or workspace skills directory:
+```bash
+# User skills folder
+mkdir -p ~/.gemini/antigravity/skills/exitkit
+cp exitkit/SKILL.md ~/.gemini/antigravity/skills/exitkit/SKILL.md
+```
+Then simply ask: `"Use @exitkit to audit and migrate this repo's dependencies."`
+
+#### C. Cursor & Windsurf IDE
+Add an instruction to your `.cursorrules` or `.windsurfrules`:
+```markdown
+When asked to audit, replace, or exit any third-party dependency:
+1. Follow the procedure defined in `exitkit/SKILL.md`.
+2. Never mutate the active checkout directly; run all changes via `npx exitkit patch` in git worktrees.
+3. Verify claims against deterministic code verifiers before claiming a patch is verified.
+```
+
+#### D. OpenAI Codex / Assistants API
+Attach `exitkit/SKILL.md` as context or system instructions in your assistant definition.
+
+---
+
+### 2. Example Prompts to Give Your Agent
+
+```markdown
+# Audit & Full Exit
+"Use ExitKit to audit our dependencies, find the highest-risk package, and generate a Dependency Exit Capsule."
+
+# Specific Package Migration
+"Follow exitkit/SKILL.md to migrate 'anthropic' to a local open-weight model via EXITKIT_BASE_URL. Ensure tests pass in an isolated worktree."
+
+# Verification & Review
+"Run `npx exitkit verify .exitkit/capsule.json` and tell me if any AI claims were REFUTED."
+```
+
+---
+
+### 3. Real Migration Walkthrough: Anthropic SDK ➔ Open-Weight Gateway
+
+Here is what an automated ExitKit migration looks like on a real agent repository (`agent.py`):
+
+#### 📄 Before: Proprietary Cloud SDK Lock-in
+```python
+# agent.py (Original)
+import anthropic
+
+def run():
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    return client.messages.create(model="claude-3-5-sonnet", messages=[...])
+```
+
+#### 🔍 Claim Ledger Cross-Examination (AI Claims Tested by Code)
+| Claim ID | Type | Statement | Ledger Verdict | Evidence |
+| :--- | :--- | :--- | :--- | :--- |
+| `c1` | `only_used_in` | `anthropic` is only imported in `agent.py` | **`CONFIRMED`** | Matched `agent.py:2, agent.py:5` |
+| `c2` | `only_used_in` | `anthropic` is also used in `server.py` | **`REFUTED`** | `server.py` has 0 occurrences |
+| `c3` | `schema_compat` | Payload messages conform to standard chat completions | **`CONFIRMED`** | Input keys match OpenAI standard |
+
+#### 🌿 Unified Diff Applied in Isolated Worktree (`exitkit/exit-anthropic`)
+```diff
+--- a/agent.py
++++ b/agent.py
+@@ -2,4 +2,5 @@
+-import anthropic
++import openai
++import os
+ 
+ def run():
+-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+-    return client.messages.create(model="claude-3-5-sonnet", messages=[...])
++    client = openai.OpenAI(base_url=os.getenv("EXITKIT_BASE_URL", "http://127.0.0.1:8000/v1"))
++    return client.chat.completions.create(model=os.getenv("EXITKIT_MODEL", "qwen2.5-coder"), messages=[...])
+```
+
+#### ✅ Replay Verification Output (`capsule.json`)
+```
+PASS  baseline:compile  exit 0  (python -m compileall -q .)
+PASS  after:compile     exit 0  (python -m compileall -q .)
+Change Status: verified (zero regressions detected, worktree clean)
+```
+
 
 ---
 

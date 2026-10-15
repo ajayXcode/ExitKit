@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 export const SKIP_DIRS = new Set(['node_modules', '.venv', 'venv', '.git', 'target', 'dist', 'build', '__pycache__', '.exitkit', '.next']);
 
@@ -116,3 +117,51 @@ export function parseArgs(argv) {
 }
 
 export const rel = (repo, f) => path.relative(repo, f).split(path.sep).join('/');
+ 
+export function loadEnv(startDir = process.cwd()) {
+  let here;
+  try {
+    here = fileURLToPath(import.meta.url);
+  } catch {
+    here = '';
+  }
+  const dirs = [startDir];
+  try {
+    dirs.push(path.resolve(startDir, '..'));
+  } catch { /* ignore */ }
+  if (here) {
+    try {
+      const pkgDir = path.resolve(path.dirname(here), '..');
+      const rootDir = path.resolve(pkgDir, '..');
+      dirs.push(pkgDir, rootDir);
+    } catch { /* ignore */ }
+  }
+  const seen = new Set();
+  for (const dir of dirs) {
+    if (!dir || seen.has(dir)) continue;
+    seen.add(dir);
+    for (const filename of ['.env.local', '.env']) {
+      const p = path.join(dir, filename);
+      if (!fs.existsSync(p)) continue;
+      try {
+        const content = fs.readFileSync(p, 'utf8');
+        for (const rawLine of content.split(/\r?\n/)) {
+          const line = rawLine.trim();
+          if (!line || line.startsWith('#')) continue;
+          const eqIdx = line.indexOf('=');
+          if (eqIdx === -1) continue;
+          const key = line.slice(0, eqIdx).trim();
+          let val = line.slice(eqIdx + 1).trim();
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          if (!(key in process.env)) {
+            process.env[key] = val;
+          }
+        }
+      } catch {
+        // ignore unreadable files
+      }
+    }
+  }
+}

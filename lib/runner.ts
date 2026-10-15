@@ -69,7 +69,7 @@ export async function executePipelineAsync(runId: string): Promise<void> {
   const childEnv = {
     ...process.env,
     EXITKIT_BASE_URL: gatewayUrl,
-    EXITKIT_MODEL: run.model || 'qwen2.5-coder-32b-instruct',
+    EXITKIT_MODEL: run.model || process.env.EXITKIT_MODEL || 'qwen2.5-coder:7b',
   };
 
   const args = [

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import fs from 'node:fs';
-import { readJSON, writeJSON, parseArgs } from '../src/util.js';
+import { readJSON, writeJSON, parseArgs, loadEnv } from '../src/util.js';
 import { scanRepo, scoreRisk, findUsages, runChecks, analyze, runLedger, applyPatch, buildCapsule, verifyCapsule, runPipeline } from '../src/index.js';
 
 const VERSION = readJSON(new URL('../package.json', import.meta.url)).version;
@@ -37,6 +37,7 @@ Model (any OpenAI-compatible endpoint serving an open-weight model):
 `;
 
 async function main() {
+  loadEnv();
   const { _: pos, flags } = parseArgs(process.argv.slice(2));
   const [cmd, a, b] = pos;
   if (flags.version) return console.log(VERSION);

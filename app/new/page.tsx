@@ -14,7 +14,7 @@ function NewAnalysisContent() {
   const [repos, setRepos] = useState<Repository[]>([]);
   const [selectedRepoId, setSelectedRepoId] = useState(initialRepo);
   const [selectedPkg, setSelectedPkg] = useState(initialPkg);
-  const [selectedModel, setSelectedModel] = useState('qwen2.5-coder-32b-instruct');
+  const [selectedModel, setSelectedModel] = useState('qwen2.5-coder:7b');
   const [ref, setRef] = useState('main');
   const [smokeCmd, setSmokeCmd] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -181,8 +181,9 @@ function NewAnalysisContent() {
             <h2 className="font-epilogue font-bold text-lg text-[#080909]">Open-Weight AI Model Gateway</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
+              { id: 'qwen2.5-coder:7b', label: 'Qwen 2.5 Coder 7B (Ollama)', desc: 'Local open-weight verified model' },
               { id: 'qwen2.5-coder-32b-instruct', label: 'Qwen 2.5 Coder 32B', desc: 'Optimal AST & structured output' },
               { id: 'deepseek-coder-v2-lite', label: 'DeepSeek Coder V2', desc: 'High accuracy refactoring' },
               { id: 'llama-3.1-70b-instruct', label: 'Llama 3.1 70B', desc: 'Broad open-weight reasoning' },

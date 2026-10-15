@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       repoId: body.repoId,
       ref: body.ref || 'main',
       packageName: body.packageName,
-      model: body.model || 'qwen2.5-coder-32b-instruct',
+      model: body.model || process.env.EXITKIT_MODEL || 'qwen2.5-coder:7b',
     });
 
     // Run pipeline asynchronously
