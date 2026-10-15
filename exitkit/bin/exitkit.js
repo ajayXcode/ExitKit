@@ -27,6 +27,9 @@ Options:
   --online       allow registry lookups for stale-package checks
   --install      run dependency install as part of the checks
   --cmd "..."    extra smoke command (repeatable)
+  --model NAME   open-weight model name (or EXITKIT_MODEL env var)
+  --api-base URL OpenAI-compatible API base URL (or EXITKIT_BASE_URL env var)
+  --api-key KEY  API key if required (or EXITKIT_API_KEY env var)
   --json         print JSON instead of a summary
 
 Model (any OpenAI-compatible endpoint serving an open-weight model):
@@ -40,12 +43,30 @@ async function main() {
   if (!cmd || flags.help || cmd === 'help') return console.log(HELP);
   const work = path.resolve(flags.work || '.exitkit');
   const w = (n) => path.join(work, n);
-  const need = (v, what) => { if (!v) throw new Error(`missing ${what}\n\n${HELP}`); return path.resolve(v); };
+
+  const need = (v, what) => {
+    if (!v) throw new Error(`missing ${what}\n\n${HELP}`);
+    const resolved = path.resolve(v);
+    if (!fs.existsSync(resolved)) {
+      throw new Error(`path for ${what} does not exist: "${resolved}"`);
+    }
+    return resolved;
+  };
+
+  const needGitRepo = (v, what = '<repo>') => {
+    const repo = need(v, what);
+    if (!fs.existsSync(path.join(repo, '.git'))) {
+      throw new Error(`target ${what} is not a git repository (missing .git): "${repo}"`);
+    }
+    return repo;
+  };
+
   const out = (data, summary) => console.log(flags.json ? JSON.stringify(data, null, 2) : summary);
 
   switch (cmd) {
     case 'run': {
-      const c = await runPipeline(need(a, '<repo>'), flags, (m) => console.error(m));
+      const repo = needGitRepo(a, '<repo>');
+      const c = await runPipeline(repo, flags, (m) => console.error(m));
       const acc = c.ai_analysis.accuracy;
       out(c, [
         `\nCapsule written to ${path.resolve(flags.out || work)}/capsule.{json,md}`,
@@ -88,7 +109,7 @@ async function main() {
       const repo = need(a, '<repo>');
       if (!b) throw new Error('missing <package>');
       if (!fs.existsSync(w('usages.json'))) throw new Error(`'usages.json' missing in "${work}": run 'exitkit usages <repo> <package> --work ${work}' first`);
-      const ai = await analyze(repo, b, readJSON(w('usages.json'))); writeJSON(w('claims.json'), ai); fs.writeFileSync(w('patch.diff'), ai.diff || '');
+      const ai = await analyze(repo, b, readJSON(w('usages.json')), flags); writeJSON(w('claims.json'), ai); fs.writeFileSync(w('patch.diff'), ai.diff || '');
       out(ai, `status: ${ai.status}${ai.reason ? ` - ${ai.reason}` : ''}\nclaims: ${ai.claims.length}  diff: ${ai.diff ? ai.diff.split('\n').length + ' lines' : 'none'}`);
       break;
     }

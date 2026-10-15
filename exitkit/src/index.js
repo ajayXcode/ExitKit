@@ -36,7 +36,7 @@ export async function runPipeline(repoArg, flags = {}, log = () => {}) {
   log('5/9 baseline checks');
   writeJSON(w('baseline.json'), runChecks(repo, copts));
   log('6/9 AI analysis');
-  const ai = await analyze(repo, target.name, usages); writeJSON(w('claims.json'), ai);
+  const ai = await analyze(repo, target.name, usages, flags); writeJSON(w('claims.json'), ai);
   fs.writeFileSync(w('patch.diff'), ai.diff || '');
   log('7/9 claim ledger');
   writeJSON(w('ledger.json'), runLedger(ai.claims, { repo, usages }));

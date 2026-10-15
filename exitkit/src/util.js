@@ -25,8 +25,10 @@ export const ALLOWED_BINARIES = new Set([
 export function isSafeCommand(cmd) {
   if (typeof cmd !== 'string' || !cmd.trim()) return false;
   const trimmed = cmd.trim();
-  // Reject dangerous shell chaining operators
-  if (/[;&`]/.test(trimmed) || /\$\(/.test(trimmed) || /\|\|/.test(trimmed)) {
+  // Reject newlines or null bytes
+  if (/[\r\n\0]/.test(trimmed)) return false;
+  // Reject dangerous shell chaining operators and redirects
+  if (/[;&`]/.test(trimmed) || /\$\(/.test(trimmed) || /\|\|/.test(trimmed) || />>/.test(trimmed)) {
     return false;
   }
   // If it contains pipe |, verify it is only inside quotes (such as compileall -x "regex|regex")
@@ -45,6 +47,8 @@ export function isSafeCommand(cmd) {
   }
   // Extract binary executable name
   const firstToken = trimmed.split(/\s+/)[0].replace(/^["']|["']$/g, '');
+  // Reject directory traversal attempts
+  if (firstToken.includes('..')) return false;
   const binName = path.basename(firstToken).toLowerCase();
   return ALLOWED_BINARIES.has(binName);
 }
@@ -56,6 +60,7 @@ export function validateCommand(cmd) {
 }
 
 export function run(cmd, cwd, timeoutMs = 300000, extraEnv = {}) {
+  validateCommand(cmd);
   const t = Date.now();
   const pycache = path.join(os.tmpdir(), 'exitkit-pycache');
   const env = { ...process.env, PYTHONPYCACHEPREFIX: pycache, ...extraEnv };

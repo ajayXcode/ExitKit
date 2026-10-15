@@ -19,50 +19,26 @@ const STEP_PROGRESS: Record<string, { step: PipelineStep; progress: number }> = 
   '9/9': { step: '9/9 capsule_ready', progress: 100 },
 };
 
-function ensureTargetRepo(repoPath: string, repoName: string, packageName: string): string {
+function ensureTargetRepo(repoPath: string, repoName: string, cloneUrl?: string): string {
   if (fs.existsSync(repoPath) && fs.existsSync(path.join(repoPath, '.git'))) {
     return repoPath;
   }
 
-  // Create isolated git repository fixture for sandbox analysis
-  const targetDir = path.join(os.tmpdir(), `exitkit-repo-${uid()}`);
-  fs.mkdirSync(targetDir, { recursive: true });
+  // Clone from upstream repository if a clone URL is available
+  if (cloneUrl) {
+    const targetDir = path.join(os.tmpdir(), `exitkit-clone-${uid()}`);
+    fs.mkdirSync(targetDir, { recursive: true });
+    const { spawnSync } = require('node:child_process');
+    const cloneRes = spawnSync('git', ['clone', '--depth', '1', cloneUrl, targetDir], {
+      encoding: 'utf8',
+      timeout: 120000,
+    });
+    if (cloneRes.status === 0 && fs.existsSync(path.join(targetDir, '.git'))) {
+      return targetDir;
+    }
+  }
 
-  const reqContent = [
-    'fastapi>=0.110,<1',
-    `${packageName}>=1.0`,
-    'openai>=1.40',
-  ].join('\n') + '\n';
-  fs.writeFileSync(path.join(targetDir, 'requirements.txt'), reqContent);
-
-  const pyContent = [
-    `# Target application using ${packageName}`,
-    `import ${packageName}`,
-    'import os',
-    '',
-    'def initialize():',
-    `    client = ${packageName}.Client()`,
-    '    return client',
-    '',
-    'if __name__ == "__main__":',
-    '    initialize()',
-  ].join('\n') + '\n';
-  fs.writeFileSync(path.join(targetDir, 'agent.py'), pyContent);
-
-  // Initialize git repository
-  const { execSync } = require('node:child_process');
-  const gitEnv = {
-    ...process.env,
-    GIT_AUTHOR_NAME: 'ExitKit',
-    GIT_AUTHOR_EMAIL: 'engine@exitkit.dev',
-    GIT_COMMITTER_NAME: 'ExitKit',
-    GIT_COMMITTER_EMAIL: 'engine@exitkit.dev',
-  };
-  execSync('git init -q -b main', { cwd: targetDir, env: gitEnv });
-  execSync('git add -A', { cwd: targetDir, env: gitEnv });
-  execSync('git commit -q -m "initial commit"', { cwd: targetDir, env: gitEnv });
-
-  return targetDir;
+  throw new Error(`Target repository "${repoName}" is not accessible at "${repoPath}". Ensure it is cloned locally or configure a valid cloneUrl.`);
 }
 
 export async function executePipelineAsync(runId: string): Promise<void> {
@@ -74,7 +50,15 @@ export async function executePipelineAsync(runId: string): Promise<void> {
   const repo = getRepository(run.repoId);
   const repoName = repo ? repo.name : run.repoFullName;
   const repoCandidatePath = path.resolve(process.cwd(), repoName);
-  const targetRepo = ensureTargetRepo(repoCandidatePath, repoName, run.packageName);
+
+  let targetRepo: string;
+  try {
+    targetRepo = ensureTargetRepo(repoCandidatePath, repoName, repo?.cloneUrl);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    updateRun(runId, { status: 'failed', error: msg });
+    return;
+  }
 
   const workDir = path.join(os.tmpdir(), `exitkit-work-${runId}`);
   fs.mkdirSync(workDir, { recursive: true });

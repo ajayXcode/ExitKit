@@ -64,6 +64,9 @@ npx exitkit run <repo-path> --package <dependency-name>
 ```
 Flags:
 - `--package <name>`: Target package to exit (if omitted, ExitKit selects the highest-risk dependency).
+- `--model <name>`: Open-weight model identifier (e.g. `qwen2.5-coder-32b-instruct` or env `EXITKIT_MODEL`).
+- `--api-base <url>`: OpenAI-compatible API base URL (e.g. `http://localhost:11434/v1` or env `EXITKIT_BASE_URL`).
+- `--api-key <key>`: API key if gateway requires authentication.
 - `--work <dir>`: Directory for intermediate files (default `.exitkit`).
 - `--out <dir>`: Directory for final `capsule.json` and `capsule.md`.
 - `--install`: Execute package installation during checks.

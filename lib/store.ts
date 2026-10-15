@@ -513,28 +513,22 @@ export function verifyCapsule(id: string): { ok: boolean; results: unknown[]; de
         results: parsed.results || [],
         details: parsed.ok
           ? 'Replay verification succeeded: recorded baseline and after checks reproduced with matching exit codes and output hashes.'
-          : 'Replay verification completed with differences between recorded and reproduced states.',
+          : 'Replay verification failed: differences detected between recorded and reproduced states.',
       };
     }
-  } catch {
-    // Fall back to recorded verification ledger if repository clone is unavailable
+    return {
+      ok: false,
+      results: [],
+      details: `Replay verification exited with code ${res.status}: ${(res.stderr || res.stdout || '').trim() || 'Command failed'}`,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      ok: false,
+      results: [],
+      details: `Replay verification error: could not execute reproduction check (${msg}).`,
+    };
   }
-
-  const comparisons = capsule.verification.comparison.map((c) => ({
-    checkId: c.id,
-    baseline: c.baseline,
-    after: c.after,
-    regression: c.regression,
-    verified: !c.regression,
-  }));
-  const hasRegressions = comparisons.some((c) => c.regression);
-  return {
-    ok: !hasRegressions,
-    results: comparisons,
-    details: hasRegressions
-      ? 'Verification failed: regressions observed between baseline and after checks'
-      : 'All checks verified from recorded execution log. No regressions detected.',
-  };
 }
 
 export function createShareLink(capsuleId: string): ShareLink {
