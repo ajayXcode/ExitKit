@@ -1,27 +1,10 @@
-import './globals.css';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import type { Metadata } from 'next';
-
+import './globals.css';
 export const metadata: Metadata = {
-  title: 'ExitKit Cloud | Cross-Examined Dependency Exits',
-  description:
-    'Exit risky dependencies safely with observed usage, open-weight AI exit plans, deterministic claim verification, and verified worktree patches.',
+  title: 'Studio — Footer',
+  description: 'Fresh ideas, imagination, and creative collaboration.',
+  icons: { icon: '/logo.svg' },
 };
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col justify-between selection:bg-violet-300 selection:text-black">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
-    </html>
-  );
+export default function RootLayout({children}: Readonly<{children: React.ReactNode}>) {
+  return <html lang="en"><body>{children}</body></html>;
 }
-
