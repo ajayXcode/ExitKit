@@ -7,3 +7,4 @@ export async function POST() {
     user: currentUser,
   });
 }
+

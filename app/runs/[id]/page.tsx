@@ -175,3 +175,4 @@ export default function RunDetailPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+

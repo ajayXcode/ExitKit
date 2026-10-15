@@ -178,3 +178,4 @@ export default function SharedCapsulePage({ params }: { params: { token: string 
     </div>
   );
 }
+

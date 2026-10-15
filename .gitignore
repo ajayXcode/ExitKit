@@ -40,3 +40,5 @@ __pycache__/
 # Tarballs
 *.tgz
 *.tar.gz
+
+.vercel
